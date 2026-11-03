@@ -1,19 +1,103 @@
-<head>,
-<link rel="stylesheet"
-      href="{{ url_for('static', filename='css/map.css') }}">
-</body>,
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>WorldMapLive</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">WorldMapLive</a>
+    <p>Explore and share places around the world.</p>
+    <div id="account-status" class="account-status" aria-live="polite">Checking account…</div>
+  </header>
 
-<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+  <main class="layout">
+    <aside class="sidebar" aria-label="Map controls">
+      <section class="panel">
+        <h1>Explore the map</h1>
+        <label for="category-filter">Filter by category</label>
+        <select id="category-filter">
+          <option value="">All categories</option>
+          <option value="home">Home</option>
+          <option value="business">Business</option>
+          <option value="landmark">Landmark</option>
+          <option value="park">Park</option>
+          <option value="other">Other</option>
+        </select>
+        <div class="stats" aria-label="Map statistics">
+          <div><strong id="statTotal">0</strong><span>Total places</span></div>
+          <div><strong id="statPins">0</strong><span>Markers</span></div>
+          <div><strong id="statStructures">0</strong><span>Shapes</span></div>
+        </div>
+      </section>
 
-<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+      <section id="account-panel" class="panel">
+        <h2>Your account</h2>
+        <p id="account-message" class="muted">Sign in or create an account to submit a place.</p>
+        <form id="login-form" class="stack">
+          <h3>Sign in</h3>
+          <label for="login-email">Email</label>
+          <input id="login-email" name="email" type="email" autocomplete="email" required>
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+          <button type="submit">Sign in</button>
+        </form>
+        <details>
+          <summary>Create an account</summary>
+          <form id="register-form" class="stack">
+            <label for="register-name">Name</label>
+            <input id="register-name" name="name" maxlength="100" autocomplete="name" required>
+            <label for="register-email">Email</label>
+            <input id="register-email" name="email" type="email" autocomplete="email" required>
+            <label for="register-password">Password (at least 10 characters)</label>
+            <input id="register-password" name="password" type="password" minlength="10" autocomplete="new-password" required>
+            <button type="submit">Create account</button>
+          </form>
+        </details>
+        <button id="logout-button" class="secondary hidden" type="button">Sign out</button>
+      </section>
 
-<script src="{{ url_for('static', filename='js/markers.js') }}"></script>
+      <section class="panel">
+        <h2>Share a place</h2>
+        <p class="muted">Sign in, then click the map to set coordinates. New places are reviewed before they appear publicly.</p>
+        <form id="location-form" class="stack">
+          <label for="location-name">Name</label>
+          <input id="location-name" name="name" maxlength="200" required>
+          <label for="location-category">Category</label>
+          <select id="location-category" name="category">
+            <option value="other">Other</option>
+            <option value="home">Home</option>
+            <option value="business">Business</option>
+            <option value="landmark">Landmark</option>
+            <option value="park">Park</option>
+          </select>
+          <label for="location-address">Address (optional)</label>
+          <input id="location-address" name="address" maxlength="1000">
+          <label for="location-description">Description (optional)</label>
+          <textarea id="location-description" name="description" maxlength="5000" rows="3"></textarea>
+          <div class="coordinate-row">
+            <label>Latitude <input id="location-lat" name="lat" type="number" min="-90" max="90" step="any" required></label>
+            <label>Longitude <input id="location-lng" name="lng" type="number" min="-180" max="180" step="any" required></label>
+          </div>
+          <button type="submit">Submit place for review</button>
+        </form>
+      </section>
+    </aside>
 
-<script src="{{ url_for('static', filename='js/buildings.js') }}"></script>
+    <section class="map-panel" aria-label="Interactive world map">
+      <div id="map" role="application" aria-label="World map. Click to choose a location coordinate."></div>
+      <p class="map-hint">Click the map to choose coordinates for a new place.</p>
+    </section>
+  </main>
 
-<script src="{{ url_for('static', filename='js/search.js') }}"></script>
-
-<script src="{{ url_for('static', filename='js/locations.js') }}"></script>
-
-<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="{{ url_for('static', filename='js/locations.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+</body>
+</html>

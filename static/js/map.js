@@ -1,159 +1,98 @@
-const map = L.map("map", {
-    zoomControl: false
-}).setView([20, 0], 3);
+(() => {
+  const map = L.map("map", { zoomControl: false }).setView([20, 0], 3);
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    maxZoom: 19
+  }).addTo(map);
 
-L.control.zoom({
-    position: "bottomright"
-}).addTo(map);
-
-L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
-        attribution:
-            '&copy; OpenStreetMap contributors',
-        maxZoom: 19
-    }
-).addTo(map);
-
-
-window.worldMap = map;
-
-window.mapMarkers = new Map();
-
-
-window.categoryConfig = {
-
-    home: {
-        icon: "🏠",
-        color: "#3b82f6"
-    },
-
-    business: {
-        icon: "🏢",
-        color: "#8b5cf6"
-    },
-
-    landmark: {
-        icon: "🗽",
-        color: "#f59e0b"
-    },
-
-    park: {
-        icon: "🌳",
-        color: "#10b981"
-    },
-
-    other: {
-        icon: "📍",
-        color: "#6b7280"
-    }
-
-};
-
-
-window.showToast = function(message) {
-
+  window.worldMap = map;
+  window.mapLayers = new Map();
+  window.showToast = (message) => {
     const toast = document.createElement("div");
-
     toast.className = "toast";
+    toast.textContent = String(message);
+    document.getElementById("toast-region").appendChild(toast);
+    window.setTimeout(() => toast.remove(), 3500);
+  };
 
-    toast.textContent = message;
+  function renderLocation(item) {
+    let layer;
+    if (item.geometry && typeof item.geometry === "object") {
+      layer = L.geoJSON(item.geometry, {
+        style: { color: "#1769aa", weight: 3, fillOpacity: 0.2 },
+        pointToLayer: (_feature, latlng) => L.marker(latlng)
+      });
+    } else {
+      const icon = L.divIcon({
+        className: "map-pin",
+        html: `<span>${window.escapeHTML ? window.escapeHTML("•") : "•"}` + "</span>",
+        iconSize: [30, 30],
+        iconAnchor: [15, 30]
+      });
+      layer = L.marker([item.lat, item.lng], { icon });
+    }
 
-    document.body.appendChild(toast);
+    const popup = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = item.name;
+    const address = document.createElement("p");
+    address.textContent = item.address || "";
+    const description = document.createElement("p");
+    description.textContent = item.description || "";
+    popup.append(title, address, description);
+    layer.bindPopup(popup).addTo(map);
+    window.mapLayers.set(item.id, layer);
+  }
 
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
-
-};
-
-
-window.escapeHTML = function(value) {
-
-    const element = document.createElement("span");
-
-    element.textContent = String(value ?? "");
-
-    return element.innerHTML;
-
-};
-
-
-window.loadMapLocations = async function() {
-
+  window.loadMapLocations = async () => {
     try {
+      const category = document.getElementById("category-filter").value;
+      const locations = await WorldMapAPI.getLocations(category);
+      window.mapLayers.forEach((layer) => map.removeLayer(layer));
+      window.mapLayers.clear();
+      locations.forEach(renderLocation);
 
-        const locations =
-            await WorldMapAPI.getLocations();
-
-        window.mapMarkers.forEach(marker => {
-            window.worldMap.removeLayer(marker);
-        });
-
-        window.mapMarkers.clear();
-
-        locations.forEach(item => {
-
-            const config =
-                window.categoryConfig[item.category]
-                || window.categoryConfig.other;
-
-            const marker = L.marker(
-                [item.lat, item.lng]
-            ).addTo(window.worldMap);
-
-            const popup = document.createElement("div");
-
-            const title = document.createElement("strong");
-
-            title.textContent = item.name;
-
-            const address = document.createElement("p");
-
-            address.textContent = item.address || "";
-
-            popup.append(title, address);
-
-            marker.bindPopup(popup);
-
-            window.mapMarkers.set(
-                item.id,
-                marker
-            );
-
-        });
-
-        const pins =
-            locations.filter(x => x.type === "marker").length;
-
-        const structures =
-            locations.filter(x => x.type !== "marker").length;
-
-        document.getElementById("statPins").textContent =
-            pins;
-
-        document.getElementById("statStructures").textContent =
-            structures;
-
-        document.getElementById("statTotal").textContent =
-            locations.length;
-
+      const pins = locations.filter((item) => !item.geometry && item.type === "marker").length;
+      document.getElementById("statPins").textContent = pins;
+      document.getElementById("statStructures").textContent = locations.length - pins;
+      document.getElementById("statTotal").textContent = locations.length;
     } catch (error) {
-
-        console.error(error);
-
-        window.showToast(
-            "Unable to load map locations."
-        );
-
+      console.error(error);
+      window.showToast(`Unable to load map locations: ${error.message}`);
     }
+  };
 
-};
+  map.on("click", (event) => {
+    document.getElementById("location-lat").value = event.latlng.lat.toFixed(6);
+    document.getElementById("location-lng").value = event.latlng.lng.toFixed(6);
+  });
 
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-        window.loadMapLocations();
+  document.getElementById("category-filter").addEventListener("change", window.loadMapLocations);
+  document.getElementById("location-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    const submitButton = form.querySelector("button[type=submit]");
+    submitButton.disabled = true;
+    try {
+      const result = await WorldMapAPI.createLocation({
+        name: values.get("name"),
+        category: values.get("category"),
+        address: values.get("address"),
+        description: values.get("description"),
+        lat: Number(values.get("lat")),
+        lng: Number(values.get("lng")),
+        type: "marker"
+      });
+      form.reset();
+      window.showToast(result.message || "Place submitted for review.");
+    } catch (error) {
+      window.showToast(error.message);
+    } finally {
+      submitButton.disabled = false;
     }
-);
+  });
+
+  document.addEventListener("DOMContentLoaded", window.loadMapLocations, { once: true });
+})();
