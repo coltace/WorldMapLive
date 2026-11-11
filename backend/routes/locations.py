@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from backend.models.location import MapItem
+from backend.services.geocoding import geocoding_service
 from extensions import db
 
 locations_bp = Blueprint("locations", __name__)
@@ -70,6 +71,40 @@ def serialize_location(item):
         "geometry": item.geometry,
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }
+
+
+@locations_bp.get("/geocode")
+def geocode_address():
+    address = request.args.get("q", "").strip()
+
+    if not address or len(address) > 300:
+        return jsonify({"error": "Enter a valid address"}), 400
+
+    result = geocoding_service.get_coordinates(address)
+
+    if not result:
+        return jsonify({"error": "Address not found or geocoding unavailable"}), 404
+
+    return jsonify(result)
+
+
+@locations_bp.get("/reverse-geocode")
+def reverse_geocode():
+    try:
+        lat = float(request.args.get("lat"))
+        lng = float(request.args.get("lng"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Valid coordinates are required"}), 400
+
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({"error": "Coordinates outside valid range"}), 400
+
+    address = geocoding_service.get_address(lat, lng)
+
+    if not address:
+        return jsonify({"error": "Address lookup unavailable"}), 404
+
+    return jsonify({"address": address})
 
 
 @locations_bp.get("")

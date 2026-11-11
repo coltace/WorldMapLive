@@ -28,6 +28,25 @@ window.WorldMapAPI = {
     return this.request(`/api/locations${query}`);
   },
 
+  geocodeAddress(address) {
+    return this.request(
+      `/api/locations/geocode?q=${encodeURIComponent(address)}`
+    );
+  },
+
+  reverseGeocode(lat, lng) {
+    return this.request(
+      `/api/locations/reverse-geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`
+    );
+  },
+
+  updateLocation(id, item) {
+    return this.request(`/api/locations/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(item)
+    });
+  },
+
   getCurrentUser() { return this.request("/api/auth/me"); },
   login(credentials) {
     return this.request("/api/auth/login", { method: "POST", body: JSON.stringify(credentials) });

@@ -8,3 +8,4 @@ email-validator
 gunicorn
 python-dotenv
 psycopg[binary]>=3.2,<4
+requests>=2.32,<3
