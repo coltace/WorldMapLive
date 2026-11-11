@@ -7,4 +7,3 @@ Flask-Limiter
 email-validator
 gunicorn
 python-dotenv
-psycopg[binary]
