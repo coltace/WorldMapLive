@@ -18,7 +18,9 @@ python scripts/init_db.py
 python app.py
 ```
 
-Open <http://127.0.0.1:5000>. Keep the generated `SECRET_KEY` private and stable between restarts. For deployments, provide `SECRET_KEY` and `DATABASE_URL` through the hosting platform's secret/environment settings, serve over HTTPS, and set `SESSION_COOKIE_SECURE=true`. The default database URI is SQLite; `UPLOAD_FOLDER` can be set to a writable persistent directory.
+`flask --app app db upgrade` (or `python scripts/init_db.py`) applies the committed migrations and creates or updates the schema. You only need to run one of these commands. Open <http://127.0.0.1:5000>. Keep the generated `SECRET_KEY` private and stable between restarts. For deployments, provide `SECRET_KEY` and `DATABASE_URL` through the hosting platform's secret/environment settings, serve over HTTPS, and set `SESSION_COOKIE_SECURE=true`. The default database URI is SQLite; `UPLOAD_FOLDER` can be set to a writable persistent directory.
+
+For an existing database whose tables were created with `db.create_all()`, do not run the initial migration upgrade directly: it will attempt to create tables that already exist. After backing up the database and verifying that its schema matches the initial migration, mark that migration as applied with `flask --app app db stamp head`. Run `db upgrade` normally after that to apply future migrations. Do not stamp a database whose schema has not been checked.
 
 ## Tests
 
