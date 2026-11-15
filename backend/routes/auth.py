@@ -18,7 +18,7 @@ def _payload():
 
 
 def _public_user(user):
-    return {"id": user.id, "name": user.name, "email": user.email}
+    return {"id": user.id, "name": user.name, "email": user.email, "role": user.role}
 
 
 @auth_bp.post("/register")

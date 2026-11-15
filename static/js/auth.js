@@ -25,6 +25,8 @@
       throw new Error("The server returned an invalid account response.");
     }
 
+    window.currentUser = user;
+    document.dispatchEvent(new CustomEvent("wml:userchange"));
     status.textContent = `Signed in as ${user.name || user.email}`;
     message.textContent = `Welcome, ${user.name || user.email}. You can submit places for review.`;
 
@@ -34,6 +36,8 @@
   }
 
   function setSignedOut() {
+    window.currentUser = null;
+    document.dispatchEvent(new CustomEvent("wml:userchange"));
     status.textContent = "Not signed in";
     message.textContent = "Sign in or create an account to submit a place.";
 

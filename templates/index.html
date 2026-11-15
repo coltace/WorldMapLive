@@ -2,98 +2,89 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>WorldMapLive</title>
+  <meta name="theme-color" content="#10233f">
+  <title>WorldMapLive — Community places</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/">WorldMapLive</a>
-    <p>Explore and share places around the world.</p>
+    <p>Community-mapped places, even when no other map knows them.</p>
     <div id="account-status" class="account-status" aria-live="polite">Checking account…</div>
   </header>
 
   <main class="layout">
-    <aside class="sidebar" aria-label="Map controls">
+    <aside class="sidebar" aria-label="Map and location controls">
       <section class="panel">
-        <h1>Explore the map</h1>
-        <label for="category-filter">Filter by category</label>
+        <h1>Find a place</h1>
+        <form id="search-form" class="search-row" role="search">
+          <label class="sr-only" for="place-search">Search names and addresses</label>
+          <input id="place-search" type="search" maxlength="100" placeholder="Name, street, city, postal code…" autocomplete="off">
+          <button type="submit">Search</button>
+        </form>
+        <p class="muted">Search community places by their custom name or address.</p>
+        <div id="search-results" class="search-results" aria-live="polite"></div>
+        <label for="category-filter">Filter map by category</label>
         <select id="category-filter">
-          <option value="">All categories</option>
-          <option value="home">Home</option>
-          <option value="business">Business</option>
-          <option value="landmark">Landmark</option>
-          <option value="park">Park</option>
-          <option value="other">Other</option>
+          <option value="">All categories</option><option value="home">Home</option><option value="business">Business</option><option value="landmark">Landmark</option><option value="park">Park</option><option value="other">Other</option>
         </select>
         <div class="stats" aria-label="Map statistics">
-          <div><strong id="statTotal">0</strong><span>Total places</span></div>
-          <div><strong id="statPins">0</strong><span>Markers</span></div>
-          <div><strong id="statStructures">0</strong><span>Shapes</span></div>
+          <div><strong id="statTotal">0</strong><span>Places</span></div><div><strong id="statPins">0</strong><span>Pins</span></div><div><strong id="statStructures">0</strong><span>Shapes</span></div>
         </div>
       </section>
 
       <section id="account-panel" class="panel">
         <h2>Your account</h2>
-        <p id="account-message" class="muted">Sign in or create an account to submit a place.</p>
+        <p id="account-message" class="muted">Sign in or create an account to submit and manage places.</p>
         <form id="login-form" class="stack">
-          <h3>Sign in</h3>
-          <label for="login-email">Email</label>
-          <input id="login-email" name="email" type="email" autocomplete="email" required>
-          <label for="login-password">Password</label>
-          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
-          <button type="submit">Sign in</button>
+          <h3>Sign in</h3><label for="login-email">Email</label><input id="login-email" name="email" type="email" autocomplete="email" required>
+          <label for="login-password">Password</label><input id="login-password" name="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button>
         </form>
-        <details>
-          <summary>Create an account</summary>
-          <form id="register-form" class="stack">
-            <label for="register-name">Name</label>
-            <input id="register-name" name="name" maxlength="100" autocomplete="name" required>
-            <label for="register-email">Email</label>
-            <input id="register-email" name="email" type="email" autocomplete="email" required>
-            <label for="register-password">Password (at least 10 characters)</label>
-            <input id="register-password" name="password" type="password" minlength="10" autocomplete="new-password" required>
-            <button type="submit">Create account</button>
-          </form>
-        </details>
+        <details><summary>Create an account</summary><form id="register-form" class="stack">
+          <label for="register-name">Name</label><input id="register-name" name="name" maxlength="100" autocomplete="name" required>
+          <label for="register-email">Email</label><input id="register-email" name="email" type="email" autocomplete="email" required>
+          <label for="register-password">Password (at least 10 characters)</label><input id="register-password" name="password" type="password" minlength="10" autocomplete="new-password" required><button type="submit">Create account</button>
+        </form></details>
         <button id="logout-button" class="secondary hidden" type="button">Sign out</button>
       </section>
 
       <section class="panel">
-        <h2>Share a place</h2>
-        <p class="muted">Sign in, then click the map to set coordinates. New places are reviewed before they appear publicly.</p>
+        <h2>Add a house or place</h2>
+        <p class="muted">No map listing required. Drop a pin on the map or enter coordinates. New submissions are reviewed before public display. Approved addresses and coordinates are public; only share places you are authorized to disclose.</p>
         <form id="location-form" class="stack">
-          <label for="location-name">Name</label>
-          <input id="location-name" name="name" maxlength="200" required>
-          <label for="location-category">Category</label>
-          <select id="location-category" name="category">
-            <option value="other">Other</option>
-            <option value="home">Home</option>
-            <option value="business">Business</option>
-            <option value="landmark">Landmark</option>
-            <option value="park">Park</option>
-          </select>
-          <label for="location-address">Address (optional)</label>
-          <input id="location-address" name="address" maxlength="1000">
-          <label for="location-description">Description (optional)</label>
-          <textarea id="location-description" name="description" maxlength="5000" rows="3"></textarea>
-          <div class="coordinate-row">
-            <label>Latitude <input id="location-lat" name="lat" type="number" min="-90" max="90" step="any" required></label>
-            <label>Longitude <input id="location-lng" name="lng" type="number" min="-180" max="180" step="any" required></label>
-          </div>
+          <label for="location-name">Custom place name</label><input id="location-name" name="name" maxlength="200" required>
+          <label for="location-category">Category</label><select id="location-category" name="category"><option value="home">Home</option><option value="business">Business</option><option value="landmark">Landmark</option><option value="park">Park</option><option value="other">Other</option></select>
+          <fieldset><legend>Address details (optional)</legend>
+            <div class="address-grid">
+              <label>House number<input name="house_number" maxlength="40" autocomplete="address-line2"></label>
+              <label>Street<input name="street" maxlength="200" autocomplete="address-line1"></label>
+              <label>Area / neighborhood<input name="area" maxlength="150"></label>
+              <label>City<input name="city" maxlength="150" autocomplete="address-level2"></label>
+              <label>State / region<input name="state" maxlength="150" autocomplete="address-level1"></label>
+              <label>Country<input name="country" maxlength="150" autocomplete="country-name"></label>
+              <label>Postal code<input name="postal_code" maxlength="40" autocomplete="postal-code"></label>
+            </div>
+          </fieldset>
+          <label for="location-address">Additional address text (optional)</label><input id="location-address" name="address" maxlength="1000" placeholder="Landmark or directions">
+          <label for="location-description">Description</label><textarea id="location-description" name="description" maxlength="5000" rows="3"></textarea>
+          <div class="coordinate-row"><label>Latitude<input id="location-lat" name="lat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></label><label>Longitude<input id="location-lng" name="lng" type="number" min="-180" max="180" step="any" inputmode="decimal" required></label></div>
+          <label for="location-photo">House / building photo (optional, JPEG/PNG/WebP, max 4 MB)</label><input id="location-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
           <button type="submit">Submit place for review</button>
         </form>
       </section>
+
+      <section id="my-places-panel" class="panel hidden"><div class="section-heading"><h2>Your places</h2><button id="refresh-mine" class="secondary compact" type="button">Refresh</button></div><div id="my-places-list" class="card-list"></div></section>
+      <section id="moderation-panel" class="panel hidden"><div class="section-heading"><h2>Review submissions</h2><button id="refresh-moderation" class="secondary compact" type="button">Refresh</button></div><div id="moderation-list" class="card-list"></div><h3>Photos awaiting review</h3><div id="photo-moderation-list" class="card-list"></div></section>
     </aside>
 
     <section class="map-panel" aria-label="Interactive world map">
       <div id="map" role="application" aria-label="World map. Click to choose a location coordinate."></div>
-      <p class="map-hint">Click the map to choose coordinates for a new place.</p>
+      <p class="map-hint">Tap/click map to set a pin; coordinates can also be typed.</p>
     </section>
   </main>
-
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/locations.js') }}"></script>

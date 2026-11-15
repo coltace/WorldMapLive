@@ -32,6 +32,14 @@ class MapItem(db.Model):
         db.Text
     )
 
+    house_number = db.Column(db.String(40), nullable=True)
+    street = db.Column(db.String(200), nullable=True, index=True)
+    area = db.Column(db.String(150), nullable=True)
+    city = db.Column(db.String(150), nullable=True, index=True)
+    state = db.Column(db.String(150), nullable=True)
+    country = db.Column(db.String(150), nullable=True, index=True)
+    postal_code = db.Column(db.String(40), nullable=True)
+
     category = db.Column(
         db.String(40),
         nullable=False,

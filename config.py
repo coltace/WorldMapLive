@@ -35,7 +35,7 @@ class Config:
 
     UPLOAD_FOLDER = os.getenv(
         "UPLOAD_FOLDER",
-        str(BASE_DIR / "static" / "uploads")
+        str(BASE_DIR / "instance" / "uploads")
     )
 
     SESSION_COOKIE_HTTPONLY = True

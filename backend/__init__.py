@@ -1,6 +1,7 @@
 import os
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from config import Config
 from extensions import csrf, db, limiter, login_manager, migrate
@@ -53,6 +54,27 @@ def create_app(test_config=None):
     @app.get("/api/health")
     def health():
         return jsonify({"status": "online", "application": "WorldMap Live"})
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def request_too_large(_error):
+        return jsonify({"error": "Request exceeds the 5 MB upload limit"}), 413
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self' https://unpkg.com; "
+            "style-src 'self' https://unpkg.com 'unsafe-inline'; "
+            "img-src 'self' data: blob: https://*.tile.openstreetmap.org; "
+            "connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        )
+        if request.is_secure:
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
 
     @app.get("/")
     def index():
