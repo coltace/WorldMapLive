@@ -42,4 +42,20 @@ jobs:
         run: python -m flake8 --select=E9,F63,F7,F82 .
 
       - name: Run tests
-        run: python -m pytest -q
+        run: python -m pytest -q --cov=backend --cov-report=term-missing --cov-report=xml:coverage.xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.python-version }}
+          path: coverage.xml
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: python-${{ matrix.python-version }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
