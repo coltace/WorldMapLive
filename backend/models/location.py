@@ -6,6 +6,10 @@ from extensions import db
 class MapItem(db.Model):
 
     __tablename__ = "map_items"
+    __table_args__ = (
+        db.Index("ix_map_items_public_geo", "status", "is_public", "latitude", "longitude"),
+        db.Index("ix_map_items_status_geo", "status", "latitude", "longitude"),
+    )
 
     id = db.Column(
         db.Integer,

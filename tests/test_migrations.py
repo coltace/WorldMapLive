@@ -7,6 +7,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INITIAL_REVISION = "ea0a3061c61f"
+EXPECTED_HEAD = "b1a6d4e7c901"
 
 
 def _upgrade(database_url, revision, env):
@@ -46,7 +47,9 @@ def test_address_migration_preserves_legacy_rows(tmp_path):
             "SELECT name, address, city, country FROM map_items WHERE id=1"
         ).fetchone()
         revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+        indexes = {entry[1] for entry in connection.execute("PRAGMA index_list(map_items)")}
 
     assert {"house_number", "street", "area", "city", "state", "country", "postal_code"} <= columns
     assert row == ("Legacy House", "Old free-form address", None, None)
-    assert revision != INITIAL_REVISION
+    assert revision == EXPECTED_HEAD
+    assert {"ix_map_items_public_geo", "ix_map_items_status_geo"} <= indexes
