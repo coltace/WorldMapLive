@@ -4,91 +4,149 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <meta name="theme-color" content="#10233f">
-  <title>WorldMapLive — Community places</title>
+  <meta name="theme-color" content="#081a2b">
+  <title>AceMap Changer — Community atlas</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">WorldMapLive</a>
-    <p>Community-mapped places, even when no other map knows them.</p>
-    <div id="account-status" class="account-status" aria-live="polite">Checking account…</div>
-  </header>
+  <main id="auth-screen" class="auth-screen{% if current_user.is_authenticated %} hidden{% endif %}" data-initially-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
+    <section class="auth-story" aria-label="About AceMap Changer">
+      <a class="brand brand-large" href="/" aria-label="AceMap Changer home">
+        <span class="brand-mark" aria-hidden="true">A</span><span>AceMap <b>Changer</b></span>
+      </a>
+      <p class="eyebrow">THE COMMUNITY ATLAS</p>
+      <h1>Add the place<br>maps missed.</h1>
+      <p class="auth-intro">Build a richer map together. Pin the homes, businesses and landmarks that ordinary directories leave out.</p>
+      <ul class="auth-promises">
+        <li><span aria-hidden="true">01</span> Place a pin anywhere, with or without a mapped address.</li>
+        <li><span aria-hidden="true">02</span> Add the details and photos that help people find it.</li>
+        <li><span aria-hidden="true">03</span> Keep new submissions under community review.</li>
+      </ul>
+      <p class="auth-caption">A more complete map starts with what you know.</p>
+    </section>
 
-  <main class="layout">
-    <aside class="sidebar" aria-label="Map and location controls">
-      <section class="panel">
-        <h1>Find a place</h1>
-        <form id="search-form" class="search-row" role="search">
-          <label class="sr-only" for="place-search">Search names and addresses</label>
-          <input id="place-search" type="search" maxlength="100" placeholder="Name, street, city, postal code…" autocomplete="off">
-          <button type="submit">Search</button>
-        </form>
-        <p class="muted">Search community places by their custom name or address.</p>
-        <div id="search-results" class="search-results" aria-live="polite"></div>
-        <label for="category-filter">Filter map by category</label>
-        <select id="category-filter">
-          <option value="">All categories</option><option value="home">Home</option><option value="business">Business</option><option value="landmark">Landmark</option><option value="park">Park</option><option value="other">Other</option>
-        </select>
-        <div class="stats" aria-label="Map statistics">
-          <div><strong id="statTotal">0</strong><span>Places</span></div><div><strong id="statPins">0</strong><span>Pins</span></div><div><strong id="statStructures">0</strong><span>Shapes</span></div>
-        </div>
-      </section>
-
-      <section id="account-panel" class="panel">
-        <h2>Your account</h2>
-        <p id="account-message" class="muted">Sign in or create an account to submit and manage places.</p>
-        <form id="login-form" class="stack">
-          <h3>Sign in</h3><label for="login-email">Email</label><input id="login-email" name="email" type="email" autocomplete="email" required>
-          <label for="login-password">Password</label><input id="login-password" name="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button>
-        </form>
-        <details><summary>Create an account</summary><form id="register-form" class="stack">
-          <label for="register-name">Name</label><input id="register-name" name="name" maxlength="100" autocomplete="name" required>
-          <label for="register-email">Email</label><input id="register-email" name="email" type="email" autocomplete="email" required>
-          <label for="register-password">Password (at least 10 characters)</label><input id="register-password" name="password" type="password" minlength="10" autocomplete="new-password" required><button type="submit">Create account</button>
-        </form></details>
-        <button id="logout-button" class="secondary hidden" type="button">Sign out</button>
-      </section>
-
-      <section class="panel">
-        <h2>Add a house or place</h2>
-        <p class="muted">No map listing required. Drop a pin on the map or enter coordinates. New submissions are reviewed before public display. Approved addresses and coordinates are public; only share places you are authorized to disclose.</p>
-        <form id="location-form" class="stack">
-          <label for="location-name">Custom place name</label><input id="location-name" name="name" maxlength="200" required>
-          <label for="location-category">Category</label><select id="location-category" name="category"><option value="home">Home</option><option value="business">Business</option><option value="landmark">Landmark</option><option value="park">Park</option><option value="other">Other</option></select>
-          <fieldset><legend>Address details (optional)</legend>
-            <div class="address-grid">
-              <label>House number<input name="house_number" maxlength="40" autocomplete="address-line2"></label>
-              <label>Street<input name="street" maxlength="200" autocomplete="address-line1"></label>
-              <label>Area / neighborhood<input name="area" maxlength="150"></label>
-              <label>City<input name="city" maxlength="150" autocomplete="address-level2"></label>
-              <label>State / region<input name="state" maxlength="150" autocomplete="address-level1"></label>
-              <label>Country<input name="country" maxlength="150" autocomplete="country-name"></label>
-              <label>Postal code<input name="postal_code" maxlength="40" autocomplete="postal-code"></label>
-            </div>
-          </fieldset>
-          <label for="location-address">Additional address text (optional)</label><input id="location-address" name="address" maxlength="1000" placeholder="Landmark or directions">
-          <label for="location-description">Description</label><textarea id="location-description" name="description" maxlength="5000" rows="3"></textarea>
-          <div class="coordinate-row"><label>Latitude<input id="location-lat" name="lat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></label><label>Longitude<input id="location-lng" name="lng" type="number" min="-180" max="180" step="any" inputmode="decimal" required></label></div>
-          <label for="location-photo">House / building photo (optional, JPEG/PNG/WebP, max 4 MB)</label><input id="location-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
-          <button type="submit">Submit place for review</button>
-        </form>
-      </section>
-
-      <section id="my-places-panel" class="panel hidden"><div class="section-heading"><h2>Your places</h2><button id="refresh-mine" class="secondary compact" type="button">Refresh</button></div><div id="my-places-list" class="card-list"></div></section>
-      <section id="moderation-panel" class="panel hidden"><div class="section-heading"><h2>Review submissions</h2><button id="refresh-moderation" class="secondary compact" type="button">Refresh</button></div><div id="moderation-list" class="card-list"></div><h3>Photos awaiting review</h3><div id="photo-moderation-list" class="card-list"></div></section>
-    </aside>
-
-    <section class="map-panel" aria-label="Interactive world map">
-      <div id="map" role="application" aria-label="World map. Click to choose a location coordinate."></div>
-      <p class="map-hint">Tap/click map to set a pin; coordinates can also be typed.</p>
+    <section class="auth-card" aria-labelledby="auth-title">
+      <p class="eyebrow auth-eyebrow">YOUR COMMUNITY MAP</p>
+      <h2 id="auth-title">Make a place for what matters.</h2>
+      <p id="account-message" class="auth-copy">Sign in to explore and contribute to the community atlas.</p>
+      <div class="auth-tabs" role="tablist" aria-label="Account access">
+        <button id="sign-in-tab" class="auth-tab active" type="button" role="tab" aria-selected="true" aria-controls="login-form">Sign in</button>
+        <button id="create-account-tab" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="register-form">Create account</button>
+      </div>
+      <form id="login-form" class="stack auth-form" autocomplete="on">
+        <label for="login-email">Email address</label>
+        <input id="login-email" name="email" type="email" autocomplete="email" required>
+        <label for="login-password">Password</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        <button class="auth-submit" type="submit">Sign in to AceMap</button>
+      </form>
+      <form id="register-form" class="stack auth-form hidden" autocomplete="on">
+        <label for="register-name">Your name</label>
+        <input id="register-name" name="name" maxlength="100" autocomplete="name" required>
+        <label for="register-email">Email address</label>
+        <input id="register-email" name="email" type="email" autocomplete="email" required>
+        <label for="register-password">Create a password</label>
+        <input id="register-password" name="password" type="password" minlength="10" autocomplete="new-password" aria-describedby="password-hint" required>
+        <small id="password-hint" class="field-hint">Use at least 10 characters.</small>
+        <button class="auth-submit" type="submit">Create my account</button>
+      </form>
+      <p id="account-status" class="auth-status" aria-live="polite"></p>
+      <p class="auth-privacy">Approved places, addresses and coordinates are public. Share only information you are authorized to disclose.</p>
     </section>
   </main>
+
+  <div id="app-shell" class="app-shell{% if not current_user.is_authenticated %} hidden{% endif %}" data-initially-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="AceMap Changer home"><span class="brand-mark" aria-hidden="true">A</span><span>AceMap <b>Changer</b></span></a>
+      <p class="topbar-tagline">Community places, even when no other map knows them.</p>
+      <div class="topbar-account"><span id="dashboard-user-name">Your atlas</span><button id="logout-button" class="secondary compact" type="button">Sign out</button></div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar" aria-label="Map and place tools">
+        <section class="panel discovery-panel">
+          <p class="eyebrow">DISCOVER</p>
+          <h1>Find a place</h1>
+          <form id="search-form" class="search-row" role="search">
+            <label class="sr-only" for="place-search">Search names and addresses</label>
+            <input id="place-search" type="search" maxlength="100" placeholder="Name, street, city, postal code…" autocomplete="off">
+            <button type="submit">Search</button>
+          </form>
+          <p class="muted">Search approved places by custom name or address.</p>
+          <div id="search-results" class="search-results" aria-live="polite"></div>
+          <label for="category-filter">Category</label>
+          <select id="category-filter">
+            <option value="">All categories</option><option value="home">Home</option><option value="business">Business</option><option value="landmark">Landmark</option><option value="park">Park</option><option value="other">Other</option>
+          </select>
+          <div class="stats" aria-label="Places shown on the map">
+            <div><strong id="statTotal">0</strong><span>Places</span></div><div><strong id="statPins">0</strong><span>Pins</span></div><div><strong id="statStructures">0</strong><span>Shapes</span></div>
+          </div>
+        </section>
+
+        <section class="panel recommendation-panel" aria-labelledby="recommendations-title">
+          <p class="eyebrow">NEAR THE MAP CENTER</p>
+          <div class="section-heading"><h2 id="recommendations-title">Recommended places</h2><label class="sr-only" for="recommendation-radius">Search radius</label><select id="recommendation-radius" aria-label="Recommendation radius"><option value="5">5 km</option><option value="10" selected>10 km</option><option value="25">25 km</option><option value="50">50 km</option></select></div>
+          <p class="muted">Suggestions use the map center and selected category; they are not personalized tracking.</p>
+          <button id="recommendation-button" class="secondary" type="button">Find nearby places</button>
+          <div id="recommendation-results" class="card-list" aria-live="polite"></div>
+        </section>
+
+        <section id="assistant-panel" class="panel assistant-panel" aria-labelledby="assistant-title">
+          <p class="eyebrow">MAP GUIDE</p>
+          <h2 id="assistant-title">Ask the atlas assistant</h2>
+          <p class="muted">Questions and matching approved public places may be sent to the configured AI provider. Conversations are not saved. Do not include private information.</p>
+          <div id="assistant-messages" class="assistant-messages" aria-live="polite" aria-relevant="additions text"></div>
+          <form id="assistant-form" class="stack">
+            <label class="sr-only" for="assistant-message">Ask a question</label>
+            <textarea id="assistant-message" maxlength="2000" rows="2" placeholder="Ask about finding or adding a place…" required></textarea>
+            <button id="assistant-submit" type="submit">Ask assistant</button>
+          </form>
+        </section>
+
+        <section class="panel contribution-panel">
+          <p class="eyebrow">CONTRIBUTE</p>
+          <h2>Add a house or place</h2>
+          <p class="muted">No map listing required. Tap the map or enter coordinates. New places are reviewed before public display.</p>
+          <form id="location-form" class="stack">
+            <label for="location-name">Custom place name</label><input id="location-name" name="name" maxlength="200" required>
+            <label for="location-category">Category</label><select id="location-category" name="category"><option value="home">Home</option><option value="business">Business</option><option value="landmark">Landmark</option><option value="park">Park</option><option value="other">Other</option></select>
+            <fieldset><legend>Address details (optional)</legend>
+              <div class="address-grid">
+                <label>House number<input name="house_number" maxlength="40" autocomplete="address-line2"></label>
+                <label>Street<input name="street" maxlength="200" autocomplete="address-line1"></label>
+                <label>Area / neighborhood<input name="area" maxlength="150"></label>
+                <label>City<input name="city" maxlength="150" autocomplete="address-level2"></label>
+                <label>State / region<input name="state" maxlength="150" autocomplete="address-level1"></label>
+                <label>Country<input name="country" maxlength="150" autocomplete="country-name"></label>
+                <label>Postal code<input name="postal_code" maxlength="40" autocomplete="postal-code"></label>
+              </div>
+            </fieldset>
+            <label for="location-address">Additional address text (optional)</label><input id="location-address" name="address" maxlength="1000" placeholder="Landmark or directions">
+            <label for="location-description">Description</label><textarea id="location-description" name="description" maxlength="5000" rows="3"></textarea>
+            <div class="coordinate-row"><label>Latitude<input id="location-lat" name="lat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></label><label>Longitude<input id="location-lng" name="lng" type="number" min="-180" max="180" step="any" inputmode="decimal" required></label></div>
+            <label for="location-photo">House / building photo (optional, JPEG/PNG/WebP, max 4 MB)</label><input id="location-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+            <button id="check-duplicates" class="secondary" type="button">Check for similar places</button>
+            <div id="duplicate-results" class="duplicate-results" aria-live="polite"></div>
+            <button type="submit">Submit place for review</button>
+          </form>
+        </section>
+
+        <section id="my-places-panel" class="panel hidden"><div class="section-heading"><h2>Your places</h2><button id="refresh-mine" class="secondary compact" type="button">Refresh</button></div><div id="my-places-list" class="card-list"></div></section>
+        <section id="moderation-panel" class="panel hidden"><div class="section-heading"><h2>Review submissions</h2><button id="refresh-moderation" class="secondary compact" type="button">Refresh</button></div><div id="moderation-list" class="card-list"></div><h3>Photos awaiting review</h3><div id="photo-moderation-list" class="card-list"></div></section>
+      </aside>
+
+      <section class="map-panel" aria-label="Interactive community map">
+        <div id="map" role="application" aria-label="World map. Tap or click to choose a location coordinate."></div>
+        <p class="map-hint">Tap the map to place a pin, or type coordinates.</p>
+      </section>
+    </main>
+  </div>
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="{{ url_for('static', filename='js/locations.js') }}"></script>
   <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
   <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 </body>
 </html>

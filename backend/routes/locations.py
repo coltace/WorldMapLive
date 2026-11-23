@@ -7,10 +7,12 @@ from flask import Blueprint, current_app, jsonify, request, send_from_directory,
 from flask_login import current_user, login_required
 from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 
 from backend.models.location import MapItem
 from backend.models.photo import Photo
+from backend.services.discovery import address_text, find_duplicate_candidates, recommend_locations
 from backend.services.geocoding import geocoding_service
 from extensions import db, limiter
 
@@ -122,6 +124,11 @@ def _staff():
     return current_user.is_authenticated and current_user.role in STAFF_ROLES
 
 
+def _user_rate_key():
+    user_id = current_user.get_id()
+    return f"user:{user_id}" if user_id else request.remote_addr or "anonymous"
+
+
 def _validated_address(data):
     values = {}
     for field, limit in ADDRESS_FIELDS.items():
@@ -144,6 +151,28 @@ def _make_address(data, fields):
             fields["area"], fields["city"], fields["state"], fields["postal_code"], fields["country"],
         ] if part
     )
+
+
+def _duplicate_input(data):
+    name = data.get("name")
+    if not isinstance(name, str) or not name.strip() or len(name.strip()) > 200:
+        return None
+    category = data.get("category")
+    if category is not None and (not isinstance(category, str) or category not in ALLOWED_CATEGORIES):
+        return None
+    try:
+        lat, lng = float(data.get("lat")), float(data.get("lng"))
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(lat) or not math.isfinite(lng) or not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return None
+    fields = _validated_address(data)
+    if fields is None:
+        return None
+    address = _make_address(data, fields)
+    if address is None:
+        return None
+    return {"name": name.strip(), "address": address, "lat": lat, "lng": lng}
 
 
 @locations_bp.get("/geocode")
@@ -199,6 +228,48 @@ def get_locations():
         query.order_by(MapItem.created_at.desc(), MapItem.id.desc()).offset((page - 1) * per_page).limit(per_page)
     ).all()
     return jsonify({"items": [serialize_location(item) for item in results], "page": page, "has_more": len(results) == per_page})
+
+
+@locations_bp.get("/recommendations")
+@limiter.limit("60 per minute")
+def get_recommendations():
+    try:
+        lat, lng = float(request.args.get("lat")), float(request.args.get("lng"))
+        radius_km = float(request.args.get("radius_km", "10"))
+        limit = int(request.args.get("limit", "10"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Valid coordinates, radius, and limit are required"}), 400
+    if not math.isfinite(lat) or not math.isfinite(lng) or not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({"error": "Coordinates outside valid range"}), 400
+    if not math.isfinite(radius_km) or not (0.1 <= radius_km <= 50):
+        return jsonify({"error": "Radius must be between 0.1 and 50 km"}), 400
+    if not (1 <= limit <= 20):
+        return jsonify({"error": "Limit must be between 1 and 20"}), 400
+    category = request.args.get("category")
+    if category and category not in ALLOWED_CATEGORIES:
+        return jsonify({"error": "Invalid category"}), 400
+    results = recommend_locations(lat, lng, radius_km, category, limit)
+    return jsonify({
+        "center": {"lat": lat, "lng": lng},
+        "radius_km": radius_km,
+        "items": [{
+            "location": serialize_location(result["location"]),
+            "distance_km": round(result["distance_km"], 2),
+            "score": result["score"],
+            "reasons": result["reasons"],
+        } for result in results],
+    })
+
+
+@locations_bp.post("/duplicate-check")
+@login_required
+@limiter.limit("10 per minute", key_func=_user_rate_key)
+def duplicate_check():
+    payload = _duplicate_input(_payload())
+    if payload is None:
+        return jsonify({"error": "Provide a valid place name, address, and coordinates"}), 400
+    candidates, truncated = find_duplicate_candidates(**payload)
+    return jsonify({"candidates": candidates, "truncated": truncated, "advisory": True})
 
 
 @locations_bp.post("")
@@ -263,6 +334,25 @@ def get_pending_locations():
         db.select(MapItem).where(MapItem.status == "pending").order_by(MapItem.created_at.asc()).limit(500)
     ).all()
     return jsonify([serialize_location(item, True) for item in items])
+
+
+@locations_bp.get("/pending/<int:item_id>/duplicate-hints")
+@login_required
+def pending_duplicate_hints(item_id):
+    if not _staff():
+        return jsonify({"error": "Forbidden"}), 403
+    item = db.session.get(MapItem, item_id)
+    if not item or item.status != "pending":
+        return jsonify({"error": "Not found"}), 404
+    candidates, truncated = find_duplicate_candidates(
+        item.name,
+        address_text(item),
+        item.latitude,
+        item.longitude,
+        include_pending=True,
+        exclude_id=item.id,
+    )
+    return jsonify({"groups": candidates, "truncated": truncated})
 
 
 @locations_bp.post("/<int:item_id>/review")
@@ -381,7 +471,12 @@ def upload_photo(item_id):
         status="pending",
     )
     db.session.add(photo)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        _remove_photo_file(filename)
+        return jsonify({"error": "Unable to save photo metadata"}), 500
     return jsonify({"message": "Photo submitted for moderation", "photo": serialize_photo(photo)}), 201
 
 

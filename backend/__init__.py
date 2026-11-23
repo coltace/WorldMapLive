@@ -1,6 +1,9 @@
 import os
 
+from alembic.script import ScriptDirectory
 from flask import Flask, jsonify, render_template, request
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from config import Config
@@ -38,6 +41,7 @@ def create_app(test_config=None):
         return jsonify({"error": "Authentication required"}), 401
 
     from backend.models import User
+    from backend.routes.assistant import assistant_bp
     from backend.routes.auth import auth_bp
     from backend.routes.locations import locations_bp
 
@@ -50,10 +54,29 @@ def create_app(test_config=None):
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(locations_bp, url_prefix="/api/locations")
+    app.register_blueprint(assistant_bp, url_prefix="/api/assistant")
 
+    @app.get("/api/health/live")
+    def health_live():
+        return jsonify({"status": "alive", "application": "AceMap Changer"})
+
+    @app.get("/api/health/ready")
     @app.get("/api/health")
-    def health():
-        return jsonify({"status": "online", "application": "WorldMap Live"})
+    def health_ready():
+        try:
+            table_names = set(inspect(db.engine).get_table_names())
+            required_tables = {"users", "map_items", "photos", "alembic_version"}
+            if not required_tables.issubset(table_names):
+                return jsonify({"status": "unavailable"}), 503
+            revisions = set(db.session.execute(text("SELECT version_num FROM alembic_version")).scalars())
+            expected_heads = set(ScriptDirectory.from_config(migrate.get_config()).get_heads())
+            if revisions != expected_heads:
+                return jsonify({"status": "unavailable"}), 503
+            db.session.execute(text("SELECT 1"))
+        except SQLAlchemyError:
+            db.session.rollback()
+            return jsonify({"status": "unavailable"}), 503
+        return jsonify({"status": "ready", "database": "ready", "migration": "current", "application": "AceMap Changer"})
 
     @app.errorhandler(RequestEntityTooLarge)
     def request_too_large(_error):

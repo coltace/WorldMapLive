@@ -7,7 +7,6 @@
   }).addTo(map);
   window.worldMap = map;
   window.mapLayers = new Map();
-  window.currentUser = null;
   const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   window.showToast = (message) => {
     const toast = document.createElement("div");
@@ -55,6 +54,13 @@
     document.getElementById("statTotal").textContent = items.length;
   };
   window.loadMapLocations = async () => {
+    if (!window.currentUser) {
+      removeLayers();
+      document.getElementById("statPins").textContent = "0";
+      document.getElementById("statStructures").textContent = "0";
+      document.getElementById("statTotal").textContent = "0";
+      return;
+    }
     try {
       const result = await WorldMapAPI.getLocations(document.getElementById("category-filter").value);
       renderMapItems(result.items || []);
@@ -200,6 +206,30 @@
       const button = makeEl("button", label, status === "rejected" ? "danger compact" : "compact"); button.type = "button";
       button.addEventListener("click", async () => { try { await WorldMapAPI.reviewLocation(item.id, status); window.showToast(`Place ${status}.`); await refreshModeration(); await window.loadMapLocations(); } catch (error) { window.showToast(error.message); } }); controls.append(button);
     });
+    const hintsButton = makeEl("button", "Check similar submissions", "secondary compact"); hintsButton.type = "button";
+    hintsButton.addEventListener("click", async () => {
+      hintsButton.disabled = true;
+      let hints = card.querySelector(".duplicate-hints");
+      if (!hints) { hints = makeEl("div", undefined, "duplicate-hints"); card.append(hints); }
+      hints.textContent = "Checking pending and approved records…";
+      try {
+        const result = await WorldMapAPI.getDuplicateHints(item.id);
+        hints.replaceChildren();
+        ["pending_review", "approved_public"].forEach((group) => {
+          const entries = result.groups?.[group] || [];
+          if (!entries.length) return;
+          hints.append(makeEl("strong", group === "pending_review" ? "Other pending submissions" : "Approved public places"));
+          entries.forEach((entry) => {
+            const line = makeEl("p", `${entry.name} — ${entry.address || "Address not provided"} (${entry.distance_m} m; ${(entry.match_reasons || []).join(", ")})`);
+            hints.append(line);
+          });
+        });
+        if (!hints.childElementCount) hints.textContent = "No likely duplicates found.";
+        if (result.truncated) hints.append(makeEl("small", "More possible matches exist; showing a limited set."));
+      } catch (error) { hints.textContent = error.message || "Duplicate hints unavailable."; }
+      finally { hintsButton.disabled = false; }
+    });
+    controls.append(hintsButton);
     card.append(controls); return card;
   }
   async function refreshModeration() {
@@ -234,5 +264,6 @@
   document.getElementById("refresh-moderation").addEventListener("click", refreshModeration);
   document.addEventListener("wml:userchange", () => { refreshMyPlaces(); refreshModeration(); });
   window.addEventListener("resize", () => map.invalidateSize({ pan: false }));
+  document.addEventListener("wml:userchange", window.loadMapLocations);
   document.addEventListener("DOMContentLoaded", () => { window.loadMapLocations(); map.invalidateSize(); });
 })();

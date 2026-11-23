@@ -23,6 +23,21 @@ window.WorldMapAPI = {
   getMyLocations() { return this.request("/api/locations/mine"); },
   getPendingLocations() { return this.request("/api/locations/pending"); },
   getPendingPhotos() { return this.request("/api/locations/photos/pending"); },
+  getRecommendations(lat, lng, radius = 25, category = "") {
+    const params = new URLSearchParams({ lat: String(lat), lng: String(lng), radius_km: String(radius) });
+    if (category) params.set("category", category);
+    return this.request(`/api/locations/recommendations?${params}`);
+  },
+  checkDuplicates(item) {
+    return this.request("/api/locations/duplicate-check", { method: "POST", body: JSON.stringify(item) });
+  },
+  getDuplicateHints(id) { return this.request(`/api/locations/pending/${id}/duplicate-hints`); },
+  askAssistant(message, locationId = null) {
+    return this.request("/api/assistant/chat", {
+      method: "POST",
+      body: JSON.stringify({ message, location_id: locationId })
+    });
+  },
   reviewLocation(id, status) {
     return this.request(`/api/locations/${id}/review`, { method: "POST", body: JSON.stringify({ status }) });
   },

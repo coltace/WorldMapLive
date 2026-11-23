@@ -45,3 +45,13 @@ class Config:
         "SESSION_COOKIE_SECURE",
         "false"
     ).strip().lower() in {"1", "true", "yes", "on"}
+
+    RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
+
+    ASSISTANT_ENABLED = os.getenv("ASSISTANT_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    ASSISTANT_BASE_URL = os.getenv("ASSISTANT_BASE_URL", "https://api.openai.com/v1")
+    ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "")
+    ASSISTANT_API_KEY = os.getenv("ASSISTANT_API_KEY", "")
+    ASSISTANT_MAX_INPUT_CHARS = 2000
+    ASSISTANT_MAX_OUTPUT_TOKENS = 400
+    ASSISTANT_MAX_OUTPUT_CHARS = 4000
