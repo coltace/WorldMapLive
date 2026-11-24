@@ -113,32 +113,6 @@
     searchTimer = setTimeout(() => runSearch(value), 350);
   });
   document.getElementById("category-filter").addEventListener("change", window.loadMapLocations);
-  map.on("click", (event) => {
-    document.getElementById("location-lat").value = event.latlng.lat.toFixed(6);
-    document.getElementById("location-lng").value = event.latlng.lng.toFixed(6);
-  });
-  const addressPayload = (values) => Object.fromEntries(["house_number", "street", "area", "city", "state", "country", "postal_code"].map((key) => [key, String(values.get(key) || "").trim()]));
-  document.getElementById("location-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!window.currentUser) { window.showToast("Sign in before submitting a place."); return; }
-    const form = event.currentTarget; const values = new FormData(form); const button = form.querySelector("button[type=submit]");
-    button.disabled = true;
-    try {
-      const result = await WorldMapAPI.createLocation({
-        name: String(values.get("name") || "").trim(), category: values.get("category"),
-        address: values.get("address"), description: values.get("description"),
-        ...addressPayload(values), lat: Number(values.get("lat")), lng: Number(values.get("lng")), type: "marker"
-      });
-      const photo = values.get("photo");
-      if (photo instanceof File && photo.size) {
-        try { await WorldMapAPI.uploadPhoto(result.location.id, photo); }
-        catch (uploadError) { window.showToast(`Place submitted, but photo upload failed: ${uploadError.message}`); }
-      }
-      form.reset(); window.showToast(result.message || "Place submitted for review.");
-      await refreshMyPlaces();
-    } catch (error) { window.showToast(error.message); }
-    finally { button.disabled = false; }
-  });
 
   const makeEl = (tag, text, className) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; };
   const statusLabel = (status) => ({ pending: "Awaiting review", approved: "Approved", rejected: "Not approved" }[status] || status);

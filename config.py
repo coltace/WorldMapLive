@@ -1,3 +1,4 @@
+import math
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -24,6 +25,15 @@ elif database_url.startswith("postgresql://"):
         1
     )
 
+
+def _env_float(name, default):
+    try:
+        value = float(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+    return max(0.0, value) if math.isfinite(value) else default
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY")
 
@@ -45,6 +55,15 @@ class Config:
         "SESSION_COOKIE_SECURE",
         "false"
     ).strip().lower() in {"1", "true", "yes", "on"}
+
+    NOMINATIM_BASE_URL = os.getenv(
+        "NOMINATIM_BASE_URL",
+        "https://nominatim.openstreetmap.org",
+    ).rstrip("/")
+    NOMINATIM_MIN_REQUEST_INTERVAL = _env_float(
+        "NOMINATIM_MIN_REQUEST_INTERVAL",
+        1.1,
+    )
 
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
 

@@ -5,6 +5,7 @@ AceMap Changer is a Flask and Leaflet community map. Guests see a full-screen si
 ## Capabilities
 
 - Create custom-named places with description, category, house number, street, area/neighborhood, city, state/region, country, and postal code. A geocoder is optional: a place can be created from manual coordinates even when no lookup result exists.
+- Search mapped addresses and named buildings through an explicit query, review up to six candidate matches, select one, and refine its draggable map pin. Search is initiated by the user; the interface does not request results as they type. The result list depends on OpenStreetMap data coverage and does not guarantee an exact entrance or building footprint.
 - Search approved places by custom name, description, or address fields. Search results are paginated (100 per page).
 - View, edit, delete, and upload photographs for your own submissions. Owner edits return a place to pending review. Supported images are JPEG, PNG, and WebP, at most 4 MB and 20 megapixels; images are decoded and re-encoded before storage.
 - Admins and moderators can review/approve/reject locations and photos from the in-page moderation panel.
@@ -13,6 +14,12 @@ AceMap Changer is a Flask and Leaflet community map. Guests see a full-screen si
 - `/api/health/live` reports process liveness. `/api/health/ready` (also `/api/health`) returns ready only when core tables exist and the database Alembic revision matches the migration head.
 
 **Privacy:** approved submissions are public, including their coordinates and any address fields provided. Do not submit a private residence or personal information unless you are authorized and intend it to be public.
+
+## Global address lookup
+
+Address search defaults to the public OpenStreetMap Nominatim service. The browser sends a query only after the user presses **Find address**. Nominatim's public-service policy forbids client-side autocomplete and limits the whole application to at most one request per second; it also requires an identifying User-Agent and visible attribution. The app identifies itself, displays attribution, serializes outbound lookups and caches successful query responses in process memory for up to six hours. Reverse geocoding returns the nearest suitable mapped object, not a guaranteed address for the exact coordinate. [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) [Search API](https://nominatim.org/release-docs/latest/api/Search/) [Reverse API](https://nominatim.org/release-docs/latest/api/Reverse/)
+
+Configure `NOMINATIM_BASE_URL` to point to a compatible Nominatim instance without changing the code. `NOMINATIM_MIN_REQUEST_INTERVAL` defaults to `1.1` seconds. The throttle and cache are per process, not shared across multiple application workers or instances. Do not lower the interval when using the public OpenStreetMap service. If the app needs higher or multi-instance traffic, use a provider whose terms support that volume or operate a compatible service with shared rate limiting and caching. Search queries leave this application and are sent to the configured geocoder; avoid sending confidential information. Manual address entry and map placement remain available when no search match exists.
 
 ## Requirements and local setup
 

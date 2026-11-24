@@ -104,12 +104,25 @@
           </form>
         </section>
 
-        <section class="panel contribution-panel">
-          <p class="eyebrow">CONTRIBUTE</p>
-          <h2>Add a house or place</h2>
-          <p class="muted">No map listing required. Tap the map or enter coordinates. New places are reviewed before public display.</p>
+        <section class="panel contribution-panel address-intelligence-panel" aria-labelledby="contribution-title">
+          <p class="eyebrow">GLOBAL ADDRESS INTELLIGENCE</p>
+          <h2 id="contribution-title">Register a building or place</h2>
+          <p class="muted">Search for a mapped address, confirm the pin, and submit a community record. Places missing from map providers can still be added manually.</p>
+          <p class="muted review-note">New submissions are reviewed before public display. Approved records can be found by name or address from any device.</p>
+          <ol class="flow-steps" aria-label="Submission steps">
+            <li><span>01</span><span>Find a match</span></li><li><span>02</span><span>Verify the pin</span></li><li><span>03</span><span>Review and submit</span></li>
+          </ol>
+          <form id="address-search-form" class="stack address-search-form">
+            <label for="address-query">House number, street, or building name</label>
+            <div class="search-row"><input id="address-query" type="search" minlength="2" maxlength="300" autocomplete="off" placeholder="e.g. 221B Baker Street, London" required><button type="submit">Find address</button></div>
+            <p class="search-disclosure">Search runs when you press Find address; it is not live typeahead. Your query is sent to the OpenStreetMap-powered address service. Avoid confidential or personal details.</p>
+            <div id="address-suggestions" class="address-suggestions" aria-live="polite" aria-relevant="additions text"></div>
+            <p class="provider-attribution"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a></p>
+          </form>
+          <div class="flow-divider"><span>OR ADD A PLACE BY PIN</span></div>
           <form id="location-form" class="stack">
-            <label for="location-name">Custom place name</label><input id="location-name" name="name" maxlength="200" required>
+            <p class="form-step-heading"><span>02</span> Verify address and location</p>
+            <label for="location-name">Place or building name</label><input id="location-name" name="name" maxlength="200" placeholder="Use the common name or a clear label" required>
             <label for="location-category">Category</label><select id="location-category" name="category"><option value="home">Home</option><option value="business">Business</option><option value="landmark">Landmark</option><option value="park">Park</option><option value="other">Other</option></select>
             <fieldset><legend>Address details (optional)</legend>
               <div class="address-grid">
@@ -125,11 +138,17 @@
             <label for="location-address">Additional address text (optional)</label><input id="location-address" name="address" maxlength="1000" placeholder="Landmark or directions">
             <label for="location-description">Description</label><textarea id="location-description" name="description" maxlength="5000" rows="3"></textarea>
             <div class="coordinate-row"><label>Latitude<input id="location-lat" name="lat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></label><label>Longitude<input id="location-lng" name="lng" type="number" min="-180" max="180" step="any" inputmode="decimal" required></label></div>
+            <div class="pin-actions"><button id="reverse-pin-lookup" class="secondary" type="button">Look up address at pin</button><span class="field-hint">Tap the map or drag the pin to refine its position.</span></div>
+            <div class="address-preview" aria-live="polite"><strong>Formatted address preview</strong><p id="address-preview-text">Choose a search match or enter address details.</p><small id="coordinate-preview">No map pin selected.</small></div>
+            <p class="field-hint">Map matches are not guaranteed to identify an exact entrance or building footprint. Check the pin carefully before submitting.</p>
             <label for="location-photo">House / building photo (optional, JPEG/PNG/WebP, max 4 MB)</label><input id="location-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+            <div id="photo-preview-container" class="photo-preview-container hidden"><img id="photo-preview" alt="Selected building photo preview"></div>
+            <p class="form-step-heading"><span>03</span> Check for duplicates and submit</p>
             <button id="check-duplicates" class="secondary" type="button">Check for similar places</button>
             <div id="duplicate-results" class="duplicate-results" aria-live="polite"></div>
-            <button type="submit">Submit place for review</button>
+            <button id="submit-location" type="submit">Submit place for review</button>
           </form>
+          <div id="photo-retry-panel" class="photo-retry-panel hidden" aria-live="polite"></div>
         </section>
 
         <section id="my-places-panel" class="panel hidden"><div class="section-heading"><h2>Your places</h2><button id="refresh-mine" class="secondary compact" type="button">Refresh</button></div><div id="my-places-list" class="card-list"></div></section>
@@ -137,8 +156,8 @@
       </aside>
 
       <section class="map-panel" aria-label="Interactive community map">
-        <div id="map" role="application" aria-label="World map. Tap or click to choose a location coordinate."></div>
-        <p class="map-hint">Tap the map to place a pin, or type coordinates.</p>
+        <div id="map" role="application" aria-label="World map. Choose a submission location or drag its pin to refine the coordinate."></div>
+        <p class="map-hint">Select an address, tap the map, or drag the pin to refine its location.</p>
       </section>
     </main>
   </div>
@@ -148,5 +167,6 @@
   <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
   <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
   <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/address_submission.js') }}"></script>
 </body>
 </html>

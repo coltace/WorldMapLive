@@ -126,6 +126,38 @@ label { display: block; margin: 8px 0 5px; font-size: .88rem; font-weight: 650; 
 .edit-form { margin-top: 7px; padding-top: 8px; border-top: 1px solid #e2e8ed; }
 .edit-form .button-row { margin-top: 6px; }
 .duplicate-results { display: grid; gap: 6px; color: #526575; font-size: .82rem; }
+.address-intelligence-panel { border-top: 3px solid #087e8b; }
+.flow-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 12px 0 16px; padding: 0; list-style: none; }
+.flow-steps li { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 8px 7px; border: 1px solid #dbe7ea; border-radius: 9px; background: #f6f9fa; color: #435a68; font-size: .7rem; font-weight: 650; }
+.flow-steps li span:first-child, .form-step-heading span { display: grid; flex: 0 0 auto; width: 23px; height: 23px; place-items: center; border-radius: 50%; background: #dceff0; color: #075d68; font-size: .66rem; font-weight: 800; }
+.address-search-form { padding: 12px; border: 1px solid #dce8eb; border-radius: 10px; background: #f7fafb; }
+.search-disclosure { margin: 2px 0 0; color: #6a7a86; font-size: .73rem; line-height: 1.45; }
+.address-suggestions { display: grid; gap: 7px; margin-top: 4px; }
+.address-candidate { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 10px; border: 1px solid #d9e5e8; border-radius: 9px; background: #fff; }
+.address-candidate-copy { min-width: 0; }
+.address-candidate-copy strong, .address-candidate-copy span { display: block; }
+.address-candidate-copy strong { overflow-wrap: anywhere; color: #1c3543; font-size: .83rem; }
+.address-candidate-copy span { margin-top: 3px; color: #647582; font-size: .75rem; line-height: 1.4; overflow-wrap: anywhere; }
+.address-candidate small { display: block; margin-top: 4px; color: #73818a; font-size: .68rem; }
+.address-candidate button { min-height: 36px; padding: 6px 9px; font-size: .74rem; }
+.provider-attribution { margin: 0; color: #6a7a86; font-size: .69rem; }
+.provider-attribution a { color: #356b78; }
+.flow-divider { display: flex; align-items: center; gap: 10px; margin: 15px 0 6px; color: #82919a; font-size: .65rem; font-weight: 800; letter-spacing: .1em; }
+.flow-divider::before, .flow-divider::after { height: 1px; flex: 1; background: #e1e8eb; content: ""; }
+.form-step-heading { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; color: #183949; font-size: .86rem; font-weight: 760; }
+.pin-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.pin-actions .field-hint { line-height: 1.4; }
+.address-preview { display: grid; gap: 4px; margin: 7px 0 2px; padding: 11px; border: 1px solid #d5e7e8; border-radius: 9px; background: #f3f9f9; }
+.address-preview strong { color: #164c58; font-size: .79rem; }
+.address-preview p { margin: 0; color: #354d59; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
+.address-preview small { color: #627782; font-size: .72rem; }
+.photo-preview-container { padding: 7px; border: 1px solid #dbe3e8; border-radius: 9px; background: #f7f9fa; }
+.photo-preview-container img { display: block; width: 100%; max-height: 200px; border-radius: 6px; object-fit: contain; }
+.photo-retry-panel { display: grid; gap: 8px; margin-top: 10px; padding: 11px; border: 1px solid #f0d6ad; border-radius: 9px; background: #fff9ef; color: #5e472a; font-size: .82rem; }
+.photo-retry-card { display: grid; gap: 7px; padding: 9px; border: 1px solid #ead8bb; border-radius: 8px; background: #fff; }
+.photo-retry-card p { margin: 0; line-height: 1.45; overflow-wrap: anywhere; }
+.duplicate-candidate { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 7px; padding: 8px; border: 1px solid #e0e7ea; border-radius: 8px; background: #f8fafb; }
+.duplicate-candidate span { line-height: 1.4; overflow-wrap: anywhere; }
 .duplicate-hints { display: grid; gap: 5px; padding: 9px; border-radius: 8px; background: #f4f7f8; color: #526575; font-size: .8rem; }
 .toast-region { position: fixed; z-index: 1200; right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); display: grid; gap: 8px; }
 .toast { max-width: min(380px, calc(100vw - 28px)); padding: 12px 16px; border-radius: 8px; background: #081a2b; color: #fff; box-shadow: 0 4px 14px #0003; }
@@ -158,6 +190,10 @@ label { display: block; margin: 8px 0 5px; font-size: .88rem; font-weight: 650; 
   .brand-large { font-size: 1.18rem; }
   .auth-card { padding: 19px; }
   .coordinate-row, .address-grid { grid-template-columns: 1fr; gap: 3px; }
+  .flow-steps li { flex-direction: column; justify-content: center; gap: 4px; padding: 7px 4px; text-align: center; }
+  .flow-steps li span:last-child { font-size: .63rem; line-height: 1.2; }
+  .address-candidate, .duplicate-candidate, .pin-actions { grid-template-columns: 1fr; }
+  .address-candidate button, .duplicate-candidate button { width: 100%; }
   .stats { gap: 5px; }
   .stats div { padding: 7px 3px; }
   .topbar-account { font-size: .75rem; }
