@@ -73,6 +73,11 @@ def test_homepage_renders_map_and_feature_controls(client):
     assert b'id="app-shell"' in response.data
     assert b'id="address-search-form"' in response.data
     assert b'id="address-suggestions"' in response.data
+    assert b'id="open-address-studio"' in response.data
+    assert b'id="close-address-studio"' in response.data
+    assert b'data-flow-step="3"' in response.data
+    assert b'id="submission-success"' in response.data
+    assert b'id="location-photo"' in response.data and b"multiple" in response.data
     assert b'id="address-preview-text"' in response.data
     assert b'id="reverse-pin-lookup"' in response.data
     assert b'id="check-duplicates"' in response.data

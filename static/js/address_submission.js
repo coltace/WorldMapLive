@@ -11,10 +11,15 @@
   const coordinatePreview = document.getElementById("coordinate-preview");
   const photoInput = document.getElementById("location-photo");
   const photoPreviewContainer = document.getElementById("photo-preview-container");
-  const photoPreview = document.getElementById("photo-preview");
+  const photoPreviewList = document.getElementById("photo-preview-list");
   const photoRetryPanel = document.getElementById("photo-retry-panel");
   const submitButton = document.getElementById("submit-location");
   const duplicateButton = document.getElementById("check-duplicates");
+  const appShell = document.getElementById("app-shell");
+  const studioOpeners = document.querySelectorAll("[data-open-address-studio]");
+  const studioCloser = document.getElementById("close-address-studio");
+  const successPanel = document.getElementById("submission-success");
+  const flowSteps = [...document.querySelectorAll("[data-flow-step]")];
   const searchButton = searchForm.querySelector("button[type=submit]");
   const fieldNames = ["house_number", "street", "area", "city", "state", "country", "postal_code"];
   const candidateFields = {
@@ -31,8 +36,54 @@
   let selectedFormattedAddress = "";
   let selectedCandidateName = "";
   let duplicateCheckedKey = null;
-  let photoPreviewUrl = null;
+  let photoPreviewUrls = [];
   let pendingPhotoRetries = [];
+  let studioReturnFocus = null;
+
+  function setWorkflowStep(step) {
+    flowSteps.forEach((item) => {
+      const itemStep = Number(item.dataset.flowStep);
+      item.classList.toggle("is-current", itemStep === step);
+      item.classList.toggle("is-complete", itemStep < step);
+      if (itemStep === step) item.setAttribute("aria-current", "step");
+      else item.removeAttribute("aria-current");
+    });
+  }
+
+  function openAddressStudio(event) {
+    studioReturnFocus = event.currentTarget;
+    appShell.classList.add("is-address-mode");
+    studioOpeners.forEach((button) => button.setAttribute("aria-pressed", "true"));
+    window.requestAnimationFrame(() => {
+      window.worldMap.invalidateSize({ pan: false });
+      const query = document.getElementById("address-query");
+      if (window.matchMedia("(max-width: 760px)").matches) query.scrollIntoView({ behavior: "smooth", block: "center" });
+      query.focus({ preventScroll: true });
+    });
+  }
+
+  function closeAddressStudio() {
+    appShell.classList.remove("is-address-mode");
+    studioOpeners.forEach((button) => button.setAttribute("aria-pressed", "false"));
+    window.requestAnimationFrame(() => window.worldMap.invalidateSize({ pan: false }));
+    if (studioReturnFocus?.isConnected) studioReturnFocus.focus({ preventScroll: true });
+  }
+
+  studioOpeners.forEach((button) => button.addEventListener("click", openAddressStudio));
+  studioCloser.addEventListener("click", closeAddressStudio);
+
+  document.getElementById("add-another-place").addEventListener("click", () => {
+    successPanel.classList.add("hidden");
+    form.classList.remove("hidden");
+    setWorkflowStep(1);
+    document.getElementById("address-query").focus({ preventScroll: true });
+  });
+
+  document.getElementById("view-my-submissions").addEventListener("click", async () => {
+    try { await window.refreshMyPlaces?.(); } catch (error) { console.warn(error); }
+    closeAddressStudio();
+    document.getElementById("my-places-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
   function currentAddressFields() {
     const values = new FormData(form);
@@ -98,6 +149,7 @@
         document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
+    setWorkflowStep(2);
     updatePreview();
     invalidateDuplicateCheck();
     return true;
@@ -132,6 +184,7 @@
     syncPin(Number(candidate.lat), Number(candidate.lng), true);
     updatePreview();
     invalidateDuplicateCheck();
+    setWorkflowStep(2);
     window.showToast("Address match selected. Verify the pin, then review the details.");
   }
 
@@ -179,7 +232,7 @@
       suggestions.textContent = `${error.message || "Address search failed."} You can still add the place by pin.`;
     } finally {
       searchButton.disabled = false;
-      searchButton.textContent = "Find address";
+      searchButton.textContent = "Find";
     }
   });
 
@@ -291,6 +344,7 @@
       renderDuplicateResults(result);
       duplicateCheckedKey = duplicateKey(payload);
       submitButton.textContent = result.candidates?.length ? "Submit anyway for review" : "Submit place for review";
+      setWorkflowStep(3);
       return true;
     } catch (error) {
       duplicateCheckedKey = null;
@@ -304,11 +358,17 @@
 
   duplicateButton.addEventListener("click", runDuplicateCheck);
   form.addEventListener("input", (event) => {
-    if (event.target.name && event.target.name !== "photo") invalidateDuplicateCheck();
+    if (event.target.name && event.target.name !== "photo") {
+      invalidateDuplicateCheck();
+      setWorkflowStep(2);
+    }
     updatePreview();
   });
   form.addEventListener("change", (event) => {
-    if (event.target.name && event.target.name !== "photo") invalidateDuplicateCheck();
+    if (event.target.name && event.target.name !== "photo") {
+      invalidateDuplicateCheck();
+      setWorkflowStep(2);
+    }
     updatePreview();
   });
 
@@ -326,7 +386,7 @@
       const card = document.createElement("article");
       card.className = "photo-retry-card";
       const message = document.createElement("p");
-      message.textContent = `The place “${entry.locationName}” was submitted, but its photo was not uploaded. Retry the photo here; do not submit the place again.`;
+      message.textContent = `The place “${entry.locationName}” was submitted, but “${entry.file.name}” was not uploaded. Retry it here; do not submit the place again.`;
       const actions = document.createElement("div");
       actions.className = "button-row";
       const retry = document.createElement("button");
@@ -363,19 +423,36 @@
   }
 
   photoInput.addEventListener("change", () => {
-    const file = photoInput.files?.[0];
-    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
-    photoPreviewUrl = null;
+    photoPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    photoPreviewUrls = [];
+    photoPreviewList.replaceChildren();
     photoPreviewContainer.classList.add("hidden");
-    if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 4 * 1024 * 1024) {
+    const files = Array.from(photoInput.files || []);
+    if (!files.length) return;
+    if (files.length > 5) {
       photoInput.value = "";
-      window.showToast("Choose a JPEG, PNG, or WebP image no larger than 4 MB.");
+      window.showToast("Choose up to 5 building photos at a time.");
       return;
     }
-    photoPreviewUrl = URL.createObjectURL(file);
-    photoPreview.src = photoPreviewUrl;
-    photoPreview.alt = `Preview of ${file.name}`;
+    const invalid = files.find((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 4 * 1024 * 1024);
+    if (invalid) {
+      photoInput.value = "";
+      window.showToast(`“${invalid.name}” is not a JPEG, PNG, or WebP image under 4 MB. No photos were selected.`);
+      return;
+    }
+    files.forEach((file) => {
+      const url = URL.createObjectURL(file);
+      photoPreviewUrls.push(url);
+      const card = document.createElement("figure");
+      card.className = "photo-preview-card";
+      const image = document.createElement("img");
+      image.src = url;
+      image.alt = `Preview of ${file.name}`;
+      const caption = document.createElement("figcaption");
+      caption.textContent = file.name;
+      card.append(image, caption);
+      photoPreviewList.append(card);
+    });
     photoPreviewContainer.classList.remove("hidden");
   });
 
@@ -405,22 +482,22 @@
         lng: payload.lng,
         type: "marker"
       });
-      const photo = values.get("photo");
-      let photoUploadFailed = false;
-      if (photo instanceof File && photo.size) {
+      const photos = values.getAll("photo").filter((photo) => photo instanceof File && photo.size);
+      const failedPhotos = [];
+      for (const photo of photos) {
         try {
           await WorldMapAPI.uploadPhoto(result.location.id, photo);
         } catch (error) {
-          photoUploadFailed = true;
+          failedPhotos.push(photo);
           pendingPhotoRetries.push({
             locationId: result.location.id,
             locationName: payload.name,
             file: photo
           });
-          renderPhotoRetryQueue();
-          window.showToast(`Place submitted. Photo upload failed: ${error.message}. Use the retry panel; do not submit the place again.`);
         }
       }
+      const photoUploadFailed = failedPhotos.length > 0;
+      if (photoUploadFailed) renderPhotoRetryQueue();
       form.reset();
       selectedFormattedAddress = "";
       selectedCandidateName = "";
@@ -430,13 +507,21 @@
       document.getElementById("address-query").value = "";
       if (submissionPin) window.worldMap.removeLayer(submissionPin);
       submissionPin = null;
-      if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
-      photoPreviewUrl = null;
-      photoPreview.removeAttribute("src");
+      photoPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+      photoPreviewUrls = [];
+      photoPreviewList.replaceChildren();
       photoPreviewContainer.classList.add("hidden");
       submitButton.textContent = "Submit place for review";
+      document.getElementById("submitted-place-name").textContent = payload.name;
+      document.getElementById("submission-success-message").textContent = photoUploadFailed
+        ? `Your place is awaiting community approval and will be searchable from any device after approval. ${failedPhotos.length} of ${photos.length} photo uploads need a retry below; do not submit the place again.`
+        : "Your place is awaiting community approval. After approval, it will be searchable by name or address from any device.";
+      form.classList.add("hidden");
+      successPanel.classList.remove("hidden");
+      setWorkflowStep(3);
       updatePreview();
-      if (!photoUploadFailed) window.showToast(result.message || "Place submitted for review.");
+      if (photoUploadFailed) window.showToast(`${failedPhotos.length} photo upload(s) failed. Retry them below; your place was submitted successfully.`);
+      else window.showToast(result.message || "Place submitted for review.");
       try { await window.refreshMyPlaces?.(); } catch (refreshError) { console.warn(refreshError); }
       try { await window.loadMapLocations?.(); } catch (refreshError) { console.warn(refreshError); }
     } catch (error) {
