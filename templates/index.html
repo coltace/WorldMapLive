@@ -60,6 +60,7 @@
     <header class="topbar">
       <a class="brand" href="/" aria-label="AceMap Changer home"><span class="brand-mark" aria-hidden="true">A</span><span>AceMap <b>Changer</b></span></a>
       <p class="topbar-tagline">Community places, even when no other map knows them.</p>
+      <button id="open-address-studio" class="topbar-action" type="button" data-open-address-studio aria-controls="address-intelligence-panel" aria-pressed="false"><span aria-hidden="true">＋</span> Add a place</button>
       <div class="topbar-account"><span id="dashboard-user-name">Your atlas</span><button id="logout-button" class="secondary compact" type="button">Sign out</button></div>
     </header>
 
@@ -84,6 +85,14 @@
           </div>
         </section>
 
+        <section class="panel studio-launch-panel" aria-labelledby="studio-launch-title">
+          <p class="eyebrow">ADD WHAT MAPS MISS</p>
+          <h2 id="studio-launch-title">Register a building</h2>
+          <p class="muted">Search worldwide, verify the pin, and submit a place for community review.</p>
+          <button class="studio-launch-action" type="button" data-open-address-studio aria-controls="address-intelligence-panel">Open Address Studio <span aria-hidden="true">→</span></button>
+          <p class="field-hint">Approved places become searchable from any device.</p>
+        </section>
+
         <section class="panel recommendation-panel" aria-labelledby="recommendations-title">
           <p class="eyebrow">NEAR THE MAP CENTER</p>
           <div class="section-heading"><h2 id="recommendations-title">Recommended places</h2><label class="sr-only" for="recommendation-radius">Search radius</label><select id="recommendation-radius" aria-label="Recommendation radius"><option value="5">5 km</option><option value="10" selected>10 km</option><option value="25">25 km</option><option value="50">50 km</option></select></div>
@@ -104,12 +113,54 @@
           </form>
         </section>
 
-        <section class="panel contribution-panel">
-          <p class="eyebrow">CONTRIBUTE</p>
-          <h2>Add a house or place</h2>
-          <p class="muted">No map listing required. Tap the map or enter coordinates. New places are reviewed before public display.</p>
+        <section class="panel reference-map-panel" aria-labelledby="university-map-title">
+          <details>
+            <summary id="university-map-title">Satellite reference: University of San Francisco</summary>
+            <p class="muted">Google Maps satellite view. Expand to load the external map.</p>
+            <iframe id="gmap_canvas" class="reference-map-frame" src="https://maps.google.com/maps?q=university%20of%20san%20francisco&amp;t=k&amp;z=13&amp;ie=UTF8&amp;iwloc=&amp;output=embed" title="Google Maps satellite view of the University of San Francisco" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            <a class="maps-app-link" href="https://www.google.com/maps/search/?api=1&amp;query=University%20of%20San%20Francisco" target="_blank" rel="noopener noreferrer">Open this location in Google Maps <span aria-hidden="true">↗</span></a>
+            <p class="maps-app-note">On mobile, this opens the Google Maps app if available; otherwise it opens in your browser.</p>
+          </details>
+        </section>
+
+        <section id="address-intelligence-panel" class="panel contribution-panel address-intelligence-panel" aria-labelledby="contribution-title">
+          <div class="studio-panel-heading">
+            <div>
+              <p class="eyebrow">GLOBAL ADDRESS INTELLIGENCE STUDIO</p>
+              <h2 id="contribution-title">Create a place record</h2>
+              <p class="muted">Find it, verify it, then share it with the map.</p>
+            </div>
+            <button id="close-address-studio" class="secondary compact" type="button">Exit studio</button>
+          </div>
+          <div class="studio-capabilities" aria-label="Address studio features"><span>Worldwide search</span><span>Pin precision</span><span>Duplicate review</span></div>
+          <p class="muted review-note">New submissions are reviewed before public display. Approved records can be found by name or address from any device.</p>
+          <ol class="flow-steps" aria-label="Submission progress">
+            <li class="is-current" data-flow-step="1" aria-current="step"><span class="step-number">01</span><span><strong>Find</strong><small>Address or building</small></span></li>
+            <li data-flow-step="2"><span class="step-number">02</span><span><strong>Verify</strong><small>Pin and details</small></span></li>
+            <li data-flow-step="3"><span class="step-number">03</span><span><strong>Review</strong><small>Photos and duplicates</small></span></li>
+          </ol>
+          <form id="address-search-form" class="stack address-search-form">
+            <label for="address-query">Search by house number, street, or building name</label>
+            <div class="search-row"><input id="address-query" type="search" minlength="2" maxlength="300" autocomplete="off" placeholder="e.g. 221B Baker Street, London" required><button type="submit"><span aria-hidden="true">⌕</span> Find</button></div>
+            <p class="search-disclosure">Search runs when you press Find; it is not live typeahead. Your query is sent to the OpenStreetMap-powered address service. Avoid confidential or personal details.</p>
+            <div id="address-suggestions" class="address-suggestions" aria-live="polite" aria-relevant="additions text"></div>
+            <p class="provider-attribution"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a></p>
+          </form>
+          <div class="flow-divider"><span>NO MATCH? PIN IT MANUALLY</span></div>
+          <p class="manual-entry-note">New, unmapped buildings are welcome. Tap the map or enter coordinates to continue without a search result.</p>
+          <section id="submission-success" class="submission-success hidden" role="status" aria-live="polite">
+            <span class="success-mark" aria-hidden="true">✓</span>
+            <p class="eyebrow">SUBMITTED FOR COMMUNITY REVIEW</p>
+            <h3 id="submitted-place-name"></h3>
+            <p id="submission-success-message"></p>
+            <div class="button-row">
+              <button id="add-another-place" type="button">Register another place</button>
+              <button id="view-my-submissions" class="secondary" type="button">View my submissions</button>
+            </div>
+          </section>
           <form id="location-form" class="stack">
-            <label for="location-name">Custom place name</label><input id="location-name" name="name" maxlength="200" required>
+            <p class="form-step-heading"><span>02</span> Verify the building and its pin</p>
+            <label for="location-name">Place or building name</label><input id="location-name" name="name" maxlength="200" placeholder="Use the common name or a clear label" required>
             <label for="location-category">Category</label><select id="location-category" name="category"><option value="home">Home</option><option value="business">Business</option><option value="landmark">Landmark</option><option value="park">Park</option><option value="other">Other</option></select>
             <fieldset><legend>Address details (optional)</legend>
               <div class="address-grid">
@@ -125,11 +176,20 @@
             <label for="location-address">Additional address text (optional)</label><input id="location-address" name="address" maxlength="1000" placeholder="Landmark or directions">
             <label for="location-description">Description</label><textarea id="location-description" name="description" maxlength="5000" rows="3"></textarea>
             <div class="coordinate-row"><label>Latitude<input id="location-lat" name="lat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></label><label>Longitude<input id="location-lng" name="lng" type="number" min="-180" max="180" step="any" inputmode="decimal" required></label></div>
-            <label for="location-photo">House / building photo (optional, JPEG/PNG/WebP, max 4 MB)</label><input id="location-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+            <div class="pin-actions"><button id="reverse-pin-lookup" class="secondary" type="button">Look up address at pin</button><span class="field-hint">Tap the map or drag the pin to refine its position.</span></div>
+            <div class="address-preview" aria-live="polite"><strong>Formatted address preview</strong><p id="address-preview-text">Choose a search match or enter address details.</p><small id="coordinate-preview">No map pin selected.</small></div>
+            <p class="field-hint">Map matches are not guaranteed to identify an exact entrance or building footprint. Check the pin carefully before submitting.</p>
+            <section class="photo-upload-card" aria-labelledby="photo-upload-title">
+              <div><strong id="photo-upload-title">Building photographs</strong><p>Show the entrance, facade, or a useful landmark. Up to 5 photos; JPEG, PNG, or WebP, max 4 MB each.</p></div>
+              <label class="photo-picker" for="location-photo"><span aria-hidden="true">＋</span> Choose photos<input id="location-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
+              <div id="photo-preview-container" class="photo-preview-container hidden"><div id="photo-preview-list" class="photo-preview-list"></div></div>
+            </section>
+            <p class="form-step-heading"><span>03</span> Review for duplicates and submit</p>
             <button id="check-duplicates" class="secondary" type="button">Check for similar places</button>
             <div id="duplicate-results" class="duplicate-results" aria-live="polite"></div>
-            <button type="submit">Submit place for review</button>
+            <button id="submit-location" type="submit">Submit place for review</button>
           </form>
+          <div id="photo-retry-panel" class="photo-retry-panel hidden" aria-live="polite"></div>
         </section>
 
         <section id="my-places-panel" class="panel hidden"><div class="section-heading"><h2>Your places</h2><button id="refresh-mine" class="secondary compact" type="button">Refresh</button></div><div id="my-places-list" class="card-list"></div></section>
@@ -137,8 +197,8 @@
       </aside>
 
       <section class="map-panel" aria-label="Interactive community map">
-        <div id="map" role="application" aria-label="World map. Tap or click to choose a location coordinate."></div>
-        <p class="map-hint">Tap the map to place a pin, or type coordinates.</p>
+        <div id="map" role="application" aria-label="World map. Choose a submission location or drag its pin to refine the coordinate."></div>
+        <p class="map-hint">Select an address, tap the map, or drag the pin to refine its location.</p>
       </section>
     </main>
   </div>
@@ -148,5 +208,6 @@
   <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
   <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
   <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/address_submission.js') }}"></script>
 </body>
 </html>

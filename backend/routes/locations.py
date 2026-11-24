@@ -187,6 +187,22 @@ def geocode_address():
     return jsonify(result)
 
 
+@locations_bp.get("/geocode/suggest")
+@limiter.limit("6 per minute")
+def suggest_addresses():
+    address = request.args.get("q", "").strip()
+    if len(address) < 2 or len(address) > 300:
+        return jsonify({"error": "Enter at least two characters of an address"}), 400
+    results = geocoding_service.search_addresses(address, limit=6)
+    if results is None:
+        return jsonify({"error": "Global address search is temporarily unavailable"}), 503
+    return jsonify({
+        "results": results,
+        "provider": "OpenStreetMap Nominatim",
+        "attribution": "© OpenStreetMap contributors",
+    })
+
+
 @locations_bp.get("/reverse-geocode")
 @limiter.limit("20 per minute")
 def reverse_geocode():
@@ -197,10 +213,16 @@ def reverse_geocode():
         return jsonify({"error": "Valid coordinates are required"}), 400
     if not (-90 <= lat <= 90 and -180 <= lng <= 180):
         return jsonify({"error": "Coordinates outside valid range"}), 400
-    address = geocoding_service.get_address(lat, lng)
-    if not address:
+    result = geocoding_service.get_address_details(lat, lng)
+    if not result:
         return jsonify({"error": "Address lookup unavailable"}), 404
-    return jsonify({"address": address})
+    return jsonify({
+        "address": result["formatted_address"],
+        "details": result["address"],
+        "name": result["name"],
+        "lat": result["lat"],
+        "lng": result["lng"],
+    })
 
 
 @locations_bp.get("")

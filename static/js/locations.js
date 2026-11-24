@@ -45,6 +45,9 @@ window.WorldMapAPI = {
     return this.request(`/api/locations/photos/${id}/review`, { method: "POST", body: JSON.stringify({ status }) });
   },
   geocodeAddress(address) { return this.request(`/api/locations/geocode?q=${encodeURIComponent(address)}`); },
+  searchAddresses(query) {
+    return this.request(`/api/locations/geocode/suggest?q=${encodeURIComponent(query)}`);
+  },
   reverseGeocode(lat, lng) {
     return this.request(`/api/locations/reverse-geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`);
   },

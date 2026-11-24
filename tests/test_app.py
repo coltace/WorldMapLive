@@ -71,6 +71,22 @@ def test_homepage_renders_map_and_feature_controls(client):
     assert b'id="recommendation-button"' in response.data
     assert b'id="auth-screen"' in response.data
     assert b'id="app-shell"' in response.data
+    assert b'id="address-search-form"' in response.data
+    assert b'id="address-suggestions"' in response.data
+    assert b'id="gmap_canvas"' in response.data
+    assert b"university%20of%20san%20francisco" in response.data
+    assert b"google.com/maps/search/?api=1&amp;query=University%20of%20San%20Francisco" in response.data
+    assert b"opens the Google Maps app if available" in response.data
+    assert b'id="open-address-studio"' in response.data
+    assert b'id="close-address-studio"' in response.data
+    assert b'data-flow-step="3"' in response.data
+    assert b'id="submission-success"' in response.data
+    assert b'id="location-photo"' in response.data and b"multiple" in response.data
+    assert b'id="address-preview-text"' in response.data
+    assert b'id="reverse-pin-lookup"' in response.data
+    assert b'id="check-duplicates"' in response.data
+    assert b'id="photo-retry-panel"' in response.data
+    assert b"not live typeahead" in response.data
     assert b"js/markers.js" not in response.data
 
 
@@ -78,6 +94,118 @@ def test_local_frontend_assets_are_served(client):
     response = client.get("/static/js/auth.js")
     assert response.status_code == 200
     assert b"WorldMapAPI" in response.data
+    address_flow = client.get("/static/js/address_submission.js")
+    assert address_flow.status_code == 200
+    assert b"Use this match" in address_flow.data
+    assert b"submit again to continue" in address_flow.data
+    assert b"Retry photo upload" in address_flow.data
+    assert b"do not submit the place again" in address_flow.data
+    assert b"!hasStructuredAddress ? selectedFormattedAddress : \"\"" in address_flow.data
+    assert b"WorldMapAPI.uploadPhoto(entry.locationId, entry.file)" in address_flow.data
+
+
+def test_global_address_suggestions_return_bounded_candidate_data(client, monkeypatch):
+    candidate = {
+        "lat": 51.5237,
+        "lng": -0.1585,
+        "name": "Sherlock Holmes Museum",
+        "formatted_address": "221B Baker Street, London, United Kingdom",
+        "address": {"house_number": "221B", "road": "Baker Street", "city": "London", "country": "United Kingdom"},
+        "category": "tourism",
+        "type": "museum",
+        "osm_type": "node",
+        "osm_id": 123,
+    }
+    seen = {}
+
+    def search_addresses(query, limit):
+        seen.update(query=query, limit=limit)
+        return [candidate]
+
+    monkeypatch.setattr("backend.routes.locations.geocoding_service.search_addresses", search_addresses)
+    response = client.get("/api/locations/geocode/suggest", query_string={"q": "221B Baker Street"})
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["provider"] == "OpenStreetMap Nominatim"
+    assert "OpenStreetMap contributors" in body["attribution"]
+    assert body["results"] == [candidate]
+    assert seen == {"query": "221B Baker Street", "limit": 6}
+
+
+def test_global_address_search_validates_queries_and_reports_provider_failure(client, monkeypatch):
+    assert client.get("/api/locations/geocode/suggest?q=x").status_code == 400
+    monkeypatch.setattr("backend.routes.locations.geocoding_service.search_addresses", lambda query, limit: None)
+    response = client.get("/api/locations/geocode/suggest?q=unmapped+street")
+    assert response.status_code == 503
+    assert "temporarily unavailable" in response.get_json()["error"]
+
+
+def test_reverse_geocode_returns_address_components_and_preserves_legacy_address(client, monkeypatch):
+    monkeypatch.setattr(
+        "backend.routes.locations.geocoding_service.get_address_details",
+        lambda lat, lng: {
+            "lat": lat,
+            "lng": lng,
+            "name": None,
+            "formatted_address": "22 Willow Lane, London, United Kingdom",
+            "address": {"house_number": "22", "road": "Willow Lane", "city": "London", "country": "United Kingdom"},
+        },
+    )
+    response = client.get("/api/locations/reverse-geocode?lat=51.5&lng=-0.12")
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["address"] == "22 Willow Lane, London, United Kingdom"
+    assert body["details"]["house_number"] == "22"
+    assert body["lat"] == 51.5
+    assert client.get("/api/locations/reverse-geocode?lat=91&lng=0").status_code == 400
+
+
+def test_geocoding_service_maps_candidate_fields_and_caches_success(monkeypatch):
+    from backend.services.geocoding import GeocodingService
+
+    service = GeocodingService(base_url="https://geocoder.example", min_request_interval=0)
+    observed = []
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            if observed[-1][0].endswith("/reverse"):
+                return {
+                    "lat": "51.5", "lon": "-0.12",
+                    "display_name": "22 Willow Lane, London, United Kingdom",
+                    "address": {"house_number": "22", "road": "Willow Lane", "city": "London"},
+                }
+            return [{
+                "lat": "51.5", "lon": "-0.12", "name": "Cedar House",
+                "display_name": "22 Willow Lane, London, United Kingdom",
+                "address": {"house_number": "22", "road": "Willow Lane", "city": "London"},
+                "category": "building", "type": "house", "osm_type": "way", "osm_id": 77,
+            }]
+
+    def fake_get(url, **kwargs):
+        observed.append((url, kwargs))
+        return FakeResponse()
+
+    monkeypatch.setattr(service.session, "get", fake_get)
+    first = service.search_addresses("22 Willow Lane", limit=6)
+    second = service.search_addresses("22 Willow Lane", limit=6)
+    assert first == second
+    assert first[0]["lat"] == 51.5
+    assert first[0]["lng"] == -0.12
+    assert first[0]["name"] == "Cedar House"
+    assert first[0]["address"]["road"] == "Willow Lane"
+    assert len(observed) == 1
+    assert observed[0][0] == "https://geocoder.example/search"
+    assert observed[0][1]["params"]["addressdetails"] == 1
+    assert observed[0][1]["params"]["namedetails"] == 1
+    details = service.get_address_details(51.5, -0.12)
+    assert details["formatted_address"] == "22 Willow Lane, London, United Kingdom"
+    assert details["address"]["road"] == "Willow Lane"
+    assert observed[1][0] == "https://geocoder.example/reverse"
+    assert observed[1][1]["params"]["addressdetails"] == 1
+    assert observed[1][1]["params"]["namedetails"] == 1
 
 
 def test_health_endpoint(client):
@@ -131,6 +259,26 @@ def test_create_place_with_full_custom_address_without_geocoder(app, client):
     public = client.get("/api/locations").get_json()
     assert public == {"items": [], "page": 1, "has_more": False}
     assert client.get(f"/api/locations/{location['id']}").status_code == 200
+
+
+def test_create_place_preserves_formatted_address_without_structured_components(client):
+    assert register(client).status_code == 201
+    formatted_address = "Building 12, River Lane, Example City"
+    response = create_place(
+        client,
+        house_number="",
+        street="",
+        area="",
+        city="",
+        state="",
+        country="",
+        postal_code="",
+        address=formatted_address,
+    )
+    assert response.status_code == 201
+    location = response.get_json()["location"]
+    assert location["address"] == formatted_address
+    assert location["street"] is None
 
 
 def test_location_rejects_out_of_range_coordinates_and_bad_address(client):
