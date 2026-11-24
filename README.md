@@ -1,5 +1,7 @@
 # AceMap Changer
 
+[![Tests](https://github.com/coltace/WorldMapLive/actions/workflows/tests.yml/badge.svg)](https://github.com/coltace/WorldMapLive/actions/workflows/tests.yml)
+
 AceMap Changer is a Flask and Leaflet community map. Guests see a full-screen sign-in/create-account entry first; after authentication, people can add a custom place even when no commercial map or online directory knows about it, set its position by clicking the map or entering latitude/longitude, and submit it for moderation. Approved locations can be found by custom name and address. Accounts use Flask-Login sessions; writes use CSRF protection.
 
 ## Capabilities
@@ -44,6 +46,8 @@ flask --app app db upgrade
 Do **not** stamp `head` on a legacy schema; that would skip the structured-address migration. If the database already has an Alembic revision, use `flask --app app db upgrade`. Never stamp a database before verifying its schema and taking a backup.
 
 ## Photo storage and deployment
+
+See the [Deployment & launch checklist](DEPLOYMENT_LAUNCH_CHECKLIST.md) for provider setup, migration, health, and storage verification steps.
 
 Uploaded files are private until their photo and location are approved, and are served through an authorization-checked route. `UPLOAD_FOLDER` must point to private, writable storage. **For durable photos on Render, a paid persistent disk must be mounted at `/var/data` and `UPLOAD_FOLDER=/var/data/uploads` set; files are saved under its `photos/` child.** Render Free web services do not support persistent disks, so their local filesystems are ephemeral and uploaded photos can be lost on restart, spin-down, or redeploy. A disk is attached to one instance and carries paid-plan and scaling/downtime implications. No disk or plan change is included here.
 
