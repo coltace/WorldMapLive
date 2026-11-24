@@ -280,3 +280,10 @@ label { display: block; margin: 8px 0 5px; font-size: .88rem; font-weight: 650; 
   .app-shell.is-address-mode .contribution-panel { min-height: 0; padding: 15px; }
   .studio-panel-heading h2 { font-size: 1.15rem; }
 }
+
+
+/* Optional third-party satellite reference map */
+.reference-map-panel details > summary { color: #1d3847; font-size: .9rem; font-weight: 730; line-height: 1.4; cursor: pointer; }
+.reference-map-panel details[open] > summary { margin-bottom: 8px; }
+.reference-map-panel .muted { margin: 6px 0 10px; font-size: .76rem; }
+.reference-map-frame { display: block; width: 100%; height: clamp(260px, 38vh, 400px); border: 0; border-radius: 9px; background: #e5edef; }
