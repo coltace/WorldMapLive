@@ -287,3 +287,7 @@ label { display: block; margin: 8px 0 5px; font-size: .88rem; font-weight: 650; 
 .reference-map-panel details[open] > summary { margin-bottom: 8px; }
 .reference-map-panel .muted { margin: 6px 0 10px; font-size: .76rem; }
 .reference-map-frame { display: block; width: 100%; height: clamp(260px, 38vh, 400px); border: 0; border-radius: 9px; background: #e5edef; }
+.maps-app-link { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 10px; margin-top: 9px; padding: 9px 12px; border: 1px solid #c8dfe2; border-radius: 8px; background: #edf7f7; color: #155560; font-size: .83rem; font-weight: 720; text-decoration: none; }
+.maps-app-link:hover { background: #e0f0f1; }
+.maps-app-link:focus-visible { outline: 3px solid #70d5d5; outline-offset: 3px; }
+.maps-app-note { margin: 6px 0 0; color: #697a86; font-size: .72rem; line-height: 1.4; }

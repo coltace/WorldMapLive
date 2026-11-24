@@ -75,6 +75,8 @@ def test_homepage_renders_map_and_feature_controls(client):
     assert b'id="address-suggestions"' in response.data
     assert b'id="gmap_canvas"' in response.data
     assert b"university%20of%20san%20francisco" in response.data
+    assert b"google.com/maps/search/?api=1&amp;query=University%20of%20San%20Francisco" in response.data
+    assert b"opens the Google Maps app if available" in response.data
     assert b'id="open-address-studio"' in response.data
     assert b'id="close-address-studio"' in response.data
     assert b'data-flow-step="3"' in response.data
